@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block content %}
+<script id="chart-data" type="application/json">{{ chart_data|tojson }}</script>
+<section class="metric-grid">
+    <article class="metric-card glow-blue">
+        <span class="metric-icon"><i data-lucide="indian-rupee"></i></span>
+        <p>Total monthly spending</p>
+        <strong>{{ summary.monthly_total }}</strong>
+        <small>+4.8% from last month</small>
+    </article>
+    <article class="metric-card glow-purple">
+        <span class="metric-icon"><i data-lucide="badge-check"></i></span>
+        <p>Active subscriptions</p>
+        <strong>{{ summary.active_count }}</strong>
+        <small>Imported from Gmail receipts</small>
+    </article>
+    <article class="metric-card glow-green">
+        <span class="metric-icon"><i data-lucide="calendar-clock"></i></span>
+        <p>Upcoming renewal</p>
+        <strong>{{ summary.next_name }}</strong>
+        <small>{{ summary.next_renewal }}</small>
+    </article>
+</section>
+
+<section class="panel gmail-strip">
+    <div>
+        <p class="eyebrow">Gmail reminders</p>
+        <h2>{{ 'Connected' if gmail_status.token else 'Connect Gmail to import real payments' }}</h2>
+        <p>
+            {% if gmail_status.data %}
+            Latest Gmail receipt data is saved locally and used for renewal reminders.
+            {% else %}
+            Sync your receipts so subscription payments from Gmail appear on this dashboard.
+            {% endif %}
+        </p>
+    </div>
+    <form method="post" action="{{ url_for('sync_gmail') }}">
+        <button class="primary-btn" type="submit"><i data-lucide="refresh-cw"></i>Sync Gmail</button>
+    </form>
+</section>
+
+{% if useful_spam %}
+<section class="panel spam-alert-strip">
+    <div>
+        <p class="eyebrow">Spam monitor</p>
+        <h2>{{ useful_spam|length }} useful email{{ '' if useful_spam|length == 1 else 's' }} may be in spam</h2>
+        <p>{{ useful_spam[0].subject }}</p>
+    </div>
+    <a class="soft-btn" href="{{ url_for('spam_monitor') }}"><i data-lucide="shield-alert"></i>Review spam</a>
+</section>
+{% endif %}
+
+{% if attention_count %}
+<section class="panel attention-strip">
+    <div>
+        <p class="eyebrow">Important mail</p>
+        <h2>{{ attention_count }} email{{ '' if attention_count == 1 else 's' }} need your attention</h2>
+        <p>
+            {% if important_mail.security %}
+            {{ important_mail.security[0].subject }}
+            {% else %}
+            {{ important_mail.attention[0].subject }}
+            {% endif %}
+        </p>
+    </div>
+    <a class="soft-btn" href="{{ url_for('important_mail') }}"><i data-lucide="mail-warning"></i>Open section</a>
+</section>
+{% endif %}
+
+{% if bank_data.monthly %}
+<section class="panel attention-strip">
+    <div>
+        <p class="eyebrow">Bank spend</p>
+        <h2>{{ bank_data.monthly[0].total_label }} spent in {{ bank_data.monthly[0].month }}</h2>
+        <p>Calculated from Gmail payment and bank transaction emails.</p>
+    </div>
+    <a class="soft-btn" href="{{ url_for('bank_transactions') }}"><i data-lucide="landmark"></i>View spend</a>
+</section>
+{% endif %}
+
+<section class="dashboard-grid">
+    <article class="panel chart-panel">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Spending trend</p>
+                <h2>Monthly spending</h2>
+            </div>
+            <button class="soft-btn" type="button">2026</button>
+        </div>
+        <canvas id="spendingChart" height="130"></canvas>
+    </article>
+
+    <article class="panel">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Renewals</p>
+                <h2>Subscription cards</h2>
+            </div>
+            <a class="soft-btn" href="{{ url_for('subscription_management') }}">View all</a>
+        </div>
+        <div class="mini-sub-list">
+            {% for sub in subscriptions[:4] %}
+            <div class="mini-sub">
+                <span class="logo {{ sub.accent }}">{{ sub.logo }}</span>
+                <div>
+                    <strong>{{ sub.name }}</strong>
+                    <small>{{ sub.renewal }}{% if sub.days_left is defined %} - {{ sub.days_left }} days left{% endif %}</small>
+                </div>
+                <b>Rs. {{ "{:,.0f}".format(sub.price) }}</b>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <p class="eyebrow">Payments</p>
+            <h2>Recent payments</h2>
+        </div>
+        <button class="soft-btn" type="button">Export</button>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Service</th><th>Date</th><th>Amount</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.service }}</td>
+                    <td>{{ payment.date }}</td>
+                    <td>{{ payment.amount }}</td>
+                    <td><span class="status paid">{{ payment.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

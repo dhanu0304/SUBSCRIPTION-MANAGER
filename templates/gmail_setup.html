@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel setup-panel">
+    <div class="panel-head">
+        <div>
+            <p class="eyebrow">Gmail integration</p>
+            <h2>Connect receipts using Google OAuth</h2>
+        </div>
+        <form method="post" action="{{ url_for('sync_gmail') }}">
+            <button class="primary-btn" type="submit"><i data-lucide="refresh-cw"></i>Sync Gmail</button>
+        </form>
+    </div>
+
+    <div class="setup-grid">
+        <div class="setup-step {{ 'complete' if gmail_status.credentials else '' }}">
+            <span>1</span>
+            <strong>Add credentials.json</strong>
+            <p>Create OAuth credentials in Google Cloud and place the downloaded file in this project folder.</p>
+        </div>
+        <div class="setup-step {{ 'complete' if gmail_status.token else '' }}">
+            <span>2</span>
+            <strong>Authorize Gmail</strong>
+            <p>Click Sync Gmail. A browser window opens once so you can approve read-only Gmail access.</p>
+        </div>
+        <div class="setup-step {{ 'complete' if gmail_status.data else '' }}">
+            <span>3</span>
+            <strong>Show reminders</strong>
+            <p>The app scans payment emails, stores detected subscriptions, and displays renewal reminders.</p>
+        </div>
+    </div>
+
+    <div class="notice">
+        <strong>Google Cloud setup:</strong>
+        Enable Gmail API, create an OAuth Client ID for a Desktop app, download the JSON file, rename it to
+        <code>credentials.json</code>, and keep it beside <code>app.py</code>.
+    </div>
+
+    <div class="notice warning">
+        <strong>If Google shows Error 403 access_denied:</strong>
+        Open Google Cloud Console, select this project, go to OAuth consent screen or Google Auth Platform,
+        open Audience, then add your Gmail address under Test users. Use the same Gmail account when approving
+        access, then click Sync Gmail again.
+    </div>
+</section>
+{% endblock %}

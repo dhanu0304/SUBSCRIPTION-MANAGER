@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<script id="chart-data" type="application/json">{{ chart_data|tojson }}</script>
+<section class="metric-grid">
+    <article class="metric-card"><p>Average monthly cost</p><strong>{{ analytics.monthly_total_label }}</strong><small>Based on {{ analytics.active_count }} active services</small></article>
+    <article class="metric-card"><p>Highest category</p><strong>{{ analytics.highest_category }}</strong><small>{{ analytics.highest_percent }}% of spending</small></article>
+    <article class="metric-card"><p>Projected yearly cost</p><strong>{{ analytics.yearly_total_label }}</strong><small>At current Gmail plan mix</small></article>
+</section>
+
+<section class="analytics-grid">
+    <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">Bars</p><h2>Monthly expense breakdown</h2></div></div>
+        <canvas id="barChart" height="150"></canvas>
+    </article>
+    <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">Categories</p><h2>Spending split</h2></div></div>
+        <canvas id="pieChart" height="190"></canvas>
+    </article>
+    <article class="panel wide">
+        <div class="panel-head"><div><p class="eyebrow">Trend</p><h2>Spending trends</h2></div></div>
+        <canvas id="trendChart" height="105"></canvas>
+    </article>
+</section>
+{% endblock %}

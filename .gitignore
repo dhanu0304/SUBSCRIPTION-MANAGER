@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Secrets and OAuth tokens
+.env
+.env.local
+credentials.json
+token.json
+**/token.json
+
+# Personal Gmail scan data
+data/
+
+# Local/editor files
+.vscode/
+.idea/
+.vercel/
+.DS_Store
+Thumbs.db

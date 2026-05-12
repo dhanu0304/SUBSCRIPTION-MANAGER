@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-grid">
+    <article class="panel profile-card">
+        <span class="avatar big">{{ user_profile.initials }}</span>
+        <h2>Gmail Account</h2>
+        <p>{{ user_profile.email }}</p>
+        <a class="soft-btn" href="{{ url_for('gmail_setup') }}">Manage Gmail</a>
+    </article>
+    <article class="panel settings-panel">
+        <div class="panel-head"><div><p class="eyebrow">Preferences</p><h2>Notification settings</h2></div></div>
+        <label class="toggle-row">Renewal reminders<input type="checkbox" checked><span></span></label>
+        <label class="toggle-row">Payment confirmation<input type="checkbox" checked><span></span></label>
+        <label class="toggle-row">Dark mode<input type="checkbox" checked><span></span></label>
+    </article>
+    <article class="panel settings-panel">
+        <div class="panel-head"><div><p class="eyebrow">Security</p><h2>Account settings</h2></div></div>
+        <button class="setting-action" type="button"><i data-lucide="lock-keyhole"></i>Change password</button>
+        <button class="setting-action" type="button"><i data-lucide="shield-check"></i>Two-factor authentication</button>
+        <button class="setting-action danger" type="button"><i data-lucide="trash-2"></i>Delete account</button>
+    </article>
+</section>
+{% endblock %}

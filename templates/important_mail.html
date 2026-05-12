@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="metric-grid">
+    <article class="metric-card glow-blue">
+        <span class="metric-icon"><i data-lucide="key-round"></i></span>
+        <p>Account and password emails</p>
+        <strong>{{ mail.security|length }}</strong>
+        <small>Passwords, OTPs, login alerts, verification</small>
+    </article>
+    <article class="metric-card glow-purple">
+        <span class="metric-icon"><i data-lucide="mail-warning"></i></span>
+        <p>Needs attention</p>
+        <strong>{{ mail.attention|length }}</strong>
+        <small>Payments, deadlines, admission, refunds, banking</small>
+    </article>
+    <article class="metric-card glow-green">
+        <span class="metric-icon"><i data-lucide="inbox"></i></span>
+        <p>Total important mail</p>
+        <strong>{{ total }}</strong>
+        <small>Scanned from Gmail read-only access</small>
+    </article>
+</section>
+
+<section class="panel gmail-strip">
+    <div>
+        <p class="eyebrow">Mail intelligence</p>
+        <h2>Important Gmail section</h2>
+        <p>Codes and password-like values are hidden in previews. Open Gmail directly when you need the full message.</p>
+    </div>
+    <form method="post" action="{{ url_for('sync_important') }}">
+        <button class="primary-btn" type="submit"><i data-lucide="refresh-cw"></i>Scan important mail</button>
+    </form>
+</section>
+
+<section class="mail-columns">
+    <article class="panel">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Protected</p>
+                <h2>Account, password, and security</h2>
+            </div>
+        </div>
+        <div class="spam-list">
+            {% for message in mail.security %}
+            <div class="mail-card high">
+                <div class="spam-card-head">
+                    <div>
+                        <p class="eyebrow">{{ message.date }} · {{ message.priority }}</p>
+                        <h3>{{ message.subject }}</h3>
+                    </div>
+                    <span class="status review">Review</span>
+                </div>
+                <p class="sender">{{ message.sender }}</p>
+                <p>{{ message.snippet }}</p>
+                <div class="notice compact">{{ message.reason }}</div>
+            </div>
+            {% else %}
+            <p class="muted-text">No account or password-related emails scanned yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Notice board</p>
+                <h2>Important to bring to notice</h2>
+            </div>
+        </div>
+        <div class="spam-list">
+            {% for message in mail.attention %}
+            <div class="mail-card">
+                <div class="spam-card-head">
+                    <div>
+                        <p class="eyebrow">{{ message.date }} · {{ message.priority }}</p>
+                        <h3>{{ message.subject }}</h3>
+                    </div>
+                    <span class="status active">Notice</span>
+                </div>
+                <p class="sender">{{ message.sender }}</p>
+                <p>{{ message.snippet }}</p>
+                <div class="notice compact">{{ message.reason }}</div>
+            </div>
+            {% else %}
+            <p class="muted-text">No notice-worthy emails scanned yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

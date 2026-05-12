@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | Subscription Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="{{ url_for('dashboard') }}" aria-label="Subscription Manager home">
+                <span class="brand-mark">S</span>
+                <span>
+                    <strong>Subscription</strong>
+                    <small>Manager</small>
+                </span>
+            </a>
+            <nav class="side-nav" aria-label="Primary navigation">
+                <a class="{{ 'active' if active_page == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}"><i data-lucide="layout-dashboard"></i>Dashboard</a>
+                <a class="{{ 'active' if active_page == 'subscriptions' else '' }}" href="{{ url_for('subscription_management') }}"><i data-lucide="wallet-cards"></i>Subscriptions</a>
+                <a class="{{ 'active' if active_page == 'add' else '' }}" href="{{ url_for('add_subscription') }}"><i data-lucide="plus-circle"></i>Add Plan</a>
+                <a class="{{ 'active' if active_page == 'analytics' else '' }}" href="{{ url_for('analytics') }}"><i data-lucide="chart-no-axes-combined"></i>Analytics</a>
+                <a class="{{ 'active' if active_page == 'settings' else '' }}" href="{{ url_for('settings') }}"><i data-lucide="settings"></i>Settings</a>
+                <a class="{{ 'active' if active_page == 'gmail' else '' }}" href="{{ url_for('gmail_setup') }}"><i data-lucide="mail-check"></i>Gmail Sync</a>
+                <a class="{{ 'active' if active_page == 'spam' else '' }}" href="{{ url_for('spam_monitor') }}"><i data-lucide="shield-alert"></i>Spam Monitor</a>
+                <a class="{{ 'active' if active_page == 'important' else '' }}" href="{{ url_for('important_mail') }}"><i data-lucide="mail-warning"></i>Important Mail</a>
+                <a class="{{ 'active' if active_page == 'bank' else '' }}" href="{{ url_for('bank_transactions') }}"><i data-lucide="landmark"></i>Bank Spend</a>
+            </nav>
+            <div class="upgrade-panel">
+                <p>Smart alerts</p>
+                <strong>Save up to 18%</strong>
+                <span>Detect unused services before renewal.</span>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <button class="icon-btn menu-toggle" type="button" aria-label="Toggle menu"><i data-lucide="menu"></i></button>
+                <div>
+                    <p class="eyebrow">Personal finance OS</p>
+                    <h1>{{ title }}</h1>
+                </div>
+                <div class="topbar-actions">
+                    <button class="icon-btn" type="button" aria-label="Notifications"><i data-lucide="bell"></i></button>
+                    <div class="user-pill">
+                        <span class="avatar">{{ user_profile.initials }}</span>
+                        <span>{{ user_profile.email }}</span>
+                    </div>
+                    {% if signed_in %}
+                    <a class="soft-btn" href="{{ url_for('logout') }}"><i data-lucide="log-out"></i>Logout</a>
+                    {% endif %}
+                </div>
+            </header>
+
+            {% block content %}{% endblock %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="toast-stack">
+                    {% for category, message in messages %}
+                    <div class="toast {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+        </main>
+    </div>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

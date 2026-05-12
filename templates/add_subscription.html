@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="form-layout">
+    <article class="panel form-panel">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">New service</p>
+                <h2>Add subscription</h2>
+            </div>
+        </div>
+        <form class="subscription-form">
+            <label>Subscription Name<input type="text" placeholder="ChatGPT Plus"></label>
+            <label>Price<input type="number" placeholder="1999"></label>
+            <label>Renewal Date<input type="date"></label>
+            <label>Billing Cycle<select><option>Monthly</option><option>Yearly</option><option>Weekly</option></select></label>
+            <label>Category<select><option>Productivity</option><option>Entertainment</option><option>Music</option><option>Education</option></select></label>
+            <button class="primary-btn full" type="button"><i data-lucide="save"></i>Save subscription</button>
+        </form>
+    </article>
+    <aside class="panel preview-panel">
+        <span class="logo large chatgpt">C</span>
+        <p class="eyebrow">Live preview</p>
+        <h2>ChatGPT Plus</h2>
+        <strong>Rs. 1,999 / month</strong>
+        <p>Renewal reminders will appear on the dashboard and analytics timeline.</p>
+    </aside>
+</section>
+{% endblock %}

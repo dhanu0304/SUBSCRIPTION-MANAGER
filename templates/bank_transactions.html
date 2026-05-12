@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<script id="chart-data" type="application/json">{{ chart_data|tojson }}</script>
+<section class="metric-grid">
+    <article class="metric-card glow-blue">
+        <span class="metric-icon"><i data-lucide="indian-rupee"></i></span>
+        <p>{{ current_month.month }} spending</p>
+        <strong>{{ current_month.total_label }}</strong>
+        <small>Detected from Gmail transaction emails</small>
+    </article>
+    <article class="metric-card glow-purple">
+        <span class="metric-icon"><i data-lucide="receipt-text"></i></span>
+        <p>Transactions found</p>
+        <strong>{{ bank.transactions|length }}</strong>
+        <small>FamPay, UPI, card, and bank emails</small>
+    </article>
+    <article class="metric-card glow-green">
+        <span class="metric-icon"><i data-lucide="calendar-days"></i></span>
+        <p>Months detected</p>
+        <strong>{{ bank.monthly|length }}</strong>
+        <small>Grouped by email date</small>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel chart-panel">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Monthly spend</p>
+                <h2>Bank transaction totals</h2>
+            </div>
+        </div>
+        <canvas id="bankChart" height="130"></canvas>
+    </article>
+
+    <article class="panel">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Scan</p>
+                <h2>Gmail bank emails</h2>
+            </div>
+        </div>
+        <p class="muted-text">This page estimates spending from read-only Gmail transaction emails. It excludes obvious credits, refunds, rewards, and cashback.</p>
+        <form method="post" action="{{ url_for('sync_bank') }}">
+            <button class="primary-btn full" type="submit"><i data-lucide="refresh-cw"></i>Scan bank transactions</button>
+        </form>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-head">
+        <div>
+            <p class="eyebrow">Monthly totals</p>
+            <h2>Spending by month</h2>
+        </div>
+    </div>
+    <div class="mini-sub-list">
+        {% for month in bank.monthly %}
+        <div class="mini-sub">
+            <span class="logo prime"><i data-lucide="calendar"></i></span>
+            <div>
+                <strong>{{ month.month }}</strong>
+                <small>Total spending detected</small>
+            </div>
+            <b>{{ month.total_label }}</b>
+        </div>
+        {% else %}
+        <p class="muted-text">No transactions scanned yet.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="spam-list">
+    {% for transaction in bank.transactions %}
+    <article class="panel spam-card">
+        <div class="spam-card-head">
+            <div>
+                <p class="eyebrow">{{ transaction.date }} · {{ transaction.source }}</p>
+                <h2>{{ transaction.merchant }}</h2>
+            </div>
+            <span class="status review">{{ transaction.amount_label }}</span>
+        </div>
+        <p class="sender">{{ transaction.sender }}</p>
+        <p>{{ transaction.subject }}</p>
+        <p>{{ transaction.snippet }}</p>
+    </article>
+    {% endfor %}
+</section>
+{% endblock %}

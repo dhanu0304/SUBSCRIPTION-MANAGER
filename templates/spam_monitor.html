@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="metric-grid">
+    <article class="metric-card glow-blue">
+        <span class="metric-icon"><i data-lucide="shield-alert"></i></span>
+        <p>Spam emails scanned</p>
+        <strong>{{ messages|length }}</strong>
+        <small>Last 30 days from Gmail Spam</small>
+    </article>
+    <article class="metric-card glow-purple">
+        <span class="metric-icon"><i data-lucide="bell-ring"></i></span>
+        <p>Worth reviewing</p>
+        <strong>{{ useful_count }}</strong>
+        <small>OTP, invoice, payment, account, or academic signals</small>
+    </article>
+    <article class="metric-card glow-green">
+        <span class="metric-icon"><i data-lucide="mail-check"></i></span>
+        <p>Signed Gmail</p>
+        <strong>{{ user_profile.initials }}</strong>
+        <small>{{ user_profile.email }}</small>
+    </article>
+</section>
+
+<section class="panel gmail-strip">
+    <div>
+        <p class="eyebrow">Spam protection</p>
+        <h2>Review useful messages before ignoring the rest</h2>
+        <p>The app checks spam for payment, OTP, account, delivery, refund, and academic keywords.</p>
+    </div>
+    <form method="post" action="{{ url_for('sync_spam') }}">
+        <button class="primary-btn" type="submit"><i data-lucide="refresh-cw"></i>Scan spam</button>
+    </form>
+</section>
+
+<section class="spam-list">
+    {% for message in messages %}
+    <article class="panel spam-card {{ 'review' if message.recommendation == 'Review' else 'ignore' }}">
+        <div class="spam-card-head">
+            <div>
+                <p class="eyebrow">{{ message.date }}</p>
+                <h2>{{ message.subject }}</h2>
+            </div>
+            <span class="status {{ 'review' if message.recommendation == 'Review' else 'ignore' }}">
+                {{ message.recommendation }}
+            </span>
+        </div>
+        <p class="sender">{{ message.sender }}</p>
+        <p>{{ message.snippet }}</p>
+        <div class="notice compact">{{ message.reason }}</div>
+    </article>
+    {% else %}
+    <article class="panel">
+        <p class="eyebrow">No spam data yet</p>
+        <h2>Scan Gmail spam to begin</h2>
+        <p class="muted-text">Click Scan spam to fetch recent Gmail spam messages and classify them.</p>
+    </article>
+    {% endfor %}
+</section>
+{% endblock %}

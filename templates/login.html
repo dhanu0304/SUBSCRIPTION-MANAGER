@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="login-layout">
+    <article class="panel login-panel">
+        <span class="brand-mark login-mark">S</span>
+        <p class="eyebrow">Subscription Manager</p>
+        <h2>Sign in with Gmail</h2>
+        <p>
+            Connect your Google account to scan your own Gmail receipts, spam, important mail,
+            and bank transaction emails. Every user gets separate saved data.
+        </p>
+        <a class="primary-btn full" href="{{ url_for('google_login') }}">
+            <i data-lucide="mail-check"></i>Sign in with Google
+        </a>
+        <div class="notice compact">
+            Gmail access is read-only. The app stores each user's token and scan results in a separate local folder.
+        </div>
+    </article>
+</section>
+{% endblock %}

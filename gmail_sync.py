@@ -126,8 +126,7 @@ def sync_gmail_subscriptions(user_id):
     messages = response.get("messages", [])
     imported = {}
 
-    for message in messages:
-        detail = service.users().messages().get(userId="me", id=message["id"], format="full").execute()
+    for detail in _fetch_message_details(service, messages, message_format="full"):
         parsed = _parse_subscription_message(detail)
         if parsed:
             imported[parsed["name"]] = parsed
@@ -150,8 +149,7 @@ def sync_spam_messages(user_id):
     messages = response.get("messages", [])
     parsed_messages = []
 
-    for message in messages:
-        detail = service.users().messages().get(userId="me", id=message["id"], format="metadata").execute()
+    for detail in _fetch_message_details(service, messages, message_format="metadata"):
         parsed_messages.append(_parse_spam_message(detail))
 
     _user_dir(user_id).mkdir(parents=True, exist_ok=True)
@@ -183,8 +181,7 @@ def sync_important_mail(user_id):
     attention = []
     seen_subjects = set()
 
-    for message in messages:
-        detail = service.users().messages().get(userId="me", id=message["id"], format="metadata").execute()
+    for detail in _fetch_message_details(service, messages, message_format="metadata"):
         parsed = _parse_important_message(detail)
         key = (parsed["sender"], parsed["subject"])
         if key in seen_subjects:
@@ -222,8 +219,7 @@ def sync_bank_transactions(user_id):
     transactions = []
     seen = set()
 
-    for message in messages:
-        detail = service.users().messages().get(userId="me", id=message["id"], format="full").execute()
+    for detail in _fetch_message_details(service, messages, message_format="metadata"):
         parsed = _parse_bank_transaction(detail)
         if not parsed:
             continue
@@ -261,6 +257,34 @@ def _gmail_service(user_id):
         else:
             raise GmailSyncError("Your Google session expired. Please sign in again.")
     return build("gmail", "v1", credentials=creds)
+
+
+def _fetch_message_details(service, messages, message_format):
+    if not messages:
+        return []
+
+    message_ids = [message["id"] for message in messages]
+    responses = {}
+
+    def collect_response(request_id, response, exception):
+        if exception is None:
+            responses[request_id] = response
+
+    # Google recommends batches of at most 50 Gmail requests to reduce rate limiting.
+    for start in range(0, len(message_ids), 50):
+        batch = service.new_batch_http_request(callback=collect_response)
+        for message_id in message_ids[start : start + 50]:
+            request_args = {
+                "userId": "me",
+                "id": message_id,
+                "format": message_format,
+            }
+            if message_format == "metadata":
+                request_args["metadataHeaders"] = ["From", "Subject", "Date"]
+            batch.add(service.users().messages().get(**request_args), request_id=message_id)
+        batch.execute()
+
+    return [responses[message_id] for message_id in message_ids if message_id in responses]
 
 
 def _save_gmail_profile(service, user_id):

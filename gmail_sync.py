@@ -55,7 +55,11 @@ def google_authorization_url(redirect_uri):
         raise GmailSyncError("Gmail packages are not installed. Run: pip install -r requirements.txt") from error
 
     flow = _oauth_flow(Flow, redirect_uri)
-    return flow.authorization_url(access_type="offline", include_granted_scopes="true", prompt="consent")
+    return flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="select_account consent",
+    )
 
 
 def finish_google_sign_in(authorization_response, redirect_uri):

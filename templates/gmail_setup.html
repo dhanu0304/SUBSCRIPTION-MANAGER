@@ -31,15 +31,16 @@
 
     <div class="notice">
         <strong>Google Cloud setup:</strong>
-        Enable Gmail API, create an OAuth Client ID for a Desktop app, download the JSON file, rename it to
+        Enable Gmail API, create an OAuth Client ID for a Web application, add this app's
+        <code>/oauth2callback</code> URL as an authorized redirect URI, download the JSON file, rename it to
         <code>credentials.json</code>, and keep it beside <code>app.py</code>.
     </div>
 
     <div class="notice warning">
-        <strong>If Google shows Error 403 access_denied:</strong>
-        Open Google Cloud Console, select this project, go to OAuth consent screen or Google Auth Platform,
-        open Audience, then add your Gmail address under Test users. Use the same Gmail account when approving
-        access, then click Sync Gmail again.
+        <strong>To allow Gmail accounts other than test users:</strong>
+        In Google Auth Platform, set Audience to External and publish the app for production. Because this app
+        requests read-only Gmail data, Google may require OAuth app verification before it can be used publicly.
+        While the app remains in Testing, only accounts listed under Test users can authorize it.
     </div>
 </section>
 {% endblock %}

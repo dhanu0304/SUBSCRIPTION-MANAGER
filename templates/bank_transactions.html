@@ -36,13 +36,13 @@
     <article class="panel">
         <div class="panel-head">
             <div>
-                <p class="eyebrow">Scan</p>
+                <p class="eyebrow">Automatic refresh</p>
                 <h2>Gmail bank emails</h2>
             </div>
         </div>
-        <p class="muted-text">This page estimates spending from read-only Gmail transaction emails. It excludes obvious credits, refunds, rewards, and cashback.</p>
+        <p class="muted-text">This page refreshes automatically every 15 minutes and excludes obvious credits, refunds, rewards, and cashback.</p>
         <form method="post" action="{{ url_for('sync_bank') }}">
-            <button class="primary-btn full" type="submit"><i data-lucide="refresh-cw"></i>Scan bank transactions</button>
+            <button class="primary-btn full" type="submit"><i data-lucide="refresh-cw"></i>Refresh now</button>
         </form>
     </article>
 </section>

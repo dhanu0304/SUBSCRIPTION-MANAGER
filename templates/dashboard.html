@@ -28,14 +28,14 @@
         <h2>{{ 'Connected' if gmail_status.token else 'Connect Gmail to import real payments' }}</h2>
         <p>
             {% if gmail_status.data %}
-            Latest Gmail receipt data is saved locally and used for renewal reminders.
+            Gmail receipts refresh automatically when this data becomes stale.
             {% else %}
-            Sync your receipts so subscription payments from Gmail appear on this dashboard.
+            Gmail receipts are imported automatically when this dashboard opens.
             {% endif %}
         </p>
     </div>
     <form method="post" action="{{ url_for('sync_gmail') }}">
-        <button class="primary-btn" type="submit"><i data-lucide="refresh-cw"></i>Sync Gmail</button>
+        <button class="primary-btn" type="submit"><i data-lucide="refresh-cw"></i>Refresh now</button>
     </form>
 </section>
 

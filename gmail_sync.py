@@ -46,6 +46,28 @@ def credentials_status(user_id=None):
     }
 
 
+def sync_needed(user_id, data_type, max_age_minutes=15):
+    if not user_id:
+        return False
+
+    data_files = {
+        "subscriptions": _gmail_data_file,
+        "spam": _spam_data_file,
+        "important": _important_mail_file,
+        "bank": _bank_transactions_file,
+    }
+    try:
+        data_file = data_files[data_type](user_id)
+    except KeyError as error:
+        raise ValueError(f"Unknown Gmail data type: {data_type}") from error
+
+    if not data_file.exists():
+        return True
+
+    age = datetime.now().timestamp() - data_file.stat().st_mtime
+    return age >= max_age_minutes * 60
+
+
 def google_authorization_url(redirect_uri):
     if not _has_google_credentials():
         raise GmailSyncError("Missing Google OAuth credentials. Add credentials.json locally or set Vercel env vars.")

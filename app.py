@@ -13,6 +13,7 @@ from gmail_sync import (
     load_spam_messages,
     load_gmail_subscriptions,
     merge_subscriptions,
+    sync_needed,
     sync_spam_messages,
     sync_important_mail,
     sync_bank_transactions,
@@ -22,6 +23,7 @@ from gmail_sync import (
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-only-change-before-deploy")
+app.config["GMAIL_AUTO_SYNC_MINUTES"] = int(os.environ.get("GMAIL_AUTO_SYNC_MINUTES", "15"))
 if not os.environ.get("VERCEL"):
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -171,6 +173,24 @@ def summary():
     }
 
 
+def auto_sync_gmail(data_type, user_id):
+    if not sync_needed(user_id, data_type, app.config["GMAIL_AUTO_SYNC_MINUTES"]):
+        return
+
+    try:
+        if data_type == "subscriptions":
+            imported = sync_gmail_subscriptions(user_id)
+            merge_subscriptions(subscriptions, imported, user_id)
+        elif data_type == "spam":
+            sync_spam_messages(user_id)
+        elif data_type == "important":
+            sync_important_mail(user_id)
+        elif data_type == "bank":
+            sync_bank_transactions(user_id)
+    except GmailSyncError as error:
+        flash(f"Automatic Gmail refresh failed: {error}", "error")
+
+
 @app.context_processor
 def inject_user_profile():
     user_id = current_user_id()
@@ -239,6 +259,7 @@ def logout():
 @app.route("/")
 def dashboard():
     user_id = current_user_id()
+    auto_sync_gmail("subscriptions", user_id)
     items = load_gmail_subscriptions(subscriptions, user_id)
     spam_messages = load_spam_messages(user_id)
     important_mail = load_important_mail(user_id)
@@ -264,6 +285,7 @@ def dashboard():
 @app.route("/subscriptions")
 def subscription_management():
     user_id = current_user_id()
+    auto_sync_gmail("subscriptions", user_id)
     return render_template(
         "subscriptions.html",
         title="Subscriptions",
@@ -334,6 +356,7 @@ def gmail_setup():
 @app.route("/spam")
 def spam_monitor():
     user_id = current_user_id()
+    auto_sync_gmail("spam", user_id)
     messages = load_spam_messages(user_id)
     useful_count = len([message for message in messages if message["recommendation"] == "Review"])
     return render_template(
@@ -349,6 +372,7 @@ def spam_monitor():
 @app.route("/important")
 def important_mail():
     user_id = current_user_id()
+    auto_sync_gmail("important", user_id)
     data = load_important_mail(user_id)
     total = len(data["security"]) + len(data["attention"])
     return render_template(
@@ -364,6 +388,7 @@ def important_mail():
 @app.route("/bank")
 def bank_transactions():
     user_id = current_user_id()
+    auto_sync_gmail("bank", user_id)
     data = load_bank_transactions(user_id)
     current_month = data["monthly"][0] if data["monthly"] else {"month": "No data", "total": 0, "total_label": "Rs. 0"}
     return render_template(

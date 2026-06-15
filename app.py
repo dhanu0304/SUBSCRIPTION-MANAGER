@@ -1,5 +1,9 @@
+import base64
+import hashlib
+import json
 import os
 
+from cryptography.fernet import Fernet, InvalidToken
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from gmail_sync import (
@@ -24,6 +28,9 @@ from gmail_sync import (
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-only-change-before-deploy")
 app.config["GMAIL_AUTO_SYNC_MINUTES"] = int(os.environ.get("GMAIL_AUTO_SYNC_MINUTES", "15"))
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = bool(os.environ.get("VERCEL"))
 if not os.environ.get("VERCEL"):
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -101,8 +108,37 @@ def is_signed_in():
     return bool(current_user_id())
 
 
+def credential_cipher():
+    secret = app.config["SECRET_KEY"].encode("utf-8")
+    key = base64.urlsafe_b64encode(hashlib.sha256(secret).digest())
+    return Fernet(key)
+
+
+def session_google_credentials():
+    encrypted = session.get("google_credentials")
+    if not encrypted:
+        return None
+    try:
+        decrypted = credential_cipher().decrypt(encrypted.encode("utf-8"))
+        return json.loads(decrypted.decode("utf-8"))
+    except (InvalidToken, ValueError, TypeError, json.JSONDecodeError):
+        session.pop("google_credentials", None)
+        return None
+
+
+def save_session_google_credentials(credentials_data):
+    serialized = json.dumps(credentials_data, separators=(",", ":")).encode("utf-8")
+    session["google_credentials"] = credential_cipher().encrypt(serialized).decode("utf-8")
+
+
+def current_gmail_status():
+    status = credentials_status(current_user_id())
+    status["token"] = status["token"] or bool(session_google_credentials())
+    return status
+
+
 def payment_rows(items):
-    if not credentials_status(current_user_id())["data"]:
+    if not current_gmail_status()["data"]:
         return payments
     return [
         {
@@ -177,16 +213,19 @@ def auto_sync_gmail(data_type, user_id):
     if not sync_needed(user_id, data_type, app.config["GMAIL_AUTO_SYNC_MINUTES"]):
         return
 
+    credentials_data = session_google_credentials()
     try:
         if data_type == "subscriptions":
-            imported = sync_gmail_subscriptions(user_id)
+            imported = sync_gmail_subscriptions(user_id, credentials_data)
             merge_subscriptions(subscriptions, imported, user_id)
         elif data_type == "spam":
-            sync_spam_messages(user_id)
+            sync_spam_messages(user_id, credentials_data)
         elif data_type == "important":
-            sync_important_mail(user_id)
+            sync_important_mail(user_id, credentials_data)
         elif data_type == "bank":
-            sync_bank_transactions(user_id)
+            sync_bank_transactions(user_id, credentials_data)
+        if credentials_data:
+            save_session_google_credentials(credentials_data)
     except GmailSyncError as error:
         flash(f"Automatic Gmail refresh failed: {error}", "error")
 
@@ -216,7 +255,7 @@ def login():
         "login.html",
         title="Sign In",
         active_page="login",
-        gmail_status=credentials_status(current_user_id()),
+        gmail_status=current_gmail_status(),
     )
 
 
@@ -240,6 +279,7 @@ def oauth2callback():
     try:
         redirect_uri = url_for("oauth2callback", _external=True)
         user = finish_google_sign_in(request.url, redirect_uri)
+        save_session_google_credentials(user.pop("credentials"))
         session["user"] = user
         session.pop("oauth_state", None)
         flash(f"Signed in as {user['email']}.", "success")
@@ -273,7 +313,7 @@ def dashboard():
         subscriptions=items,
         payments=payment_rows(items),
         summary=summary(),
-        gmail_status=credentials_status(user_id),
+        gmail_status=current_gmail_status(),
         useful_spam=useful_spam,
         important_mail=important_mail,
         attention_count=attention_count,
@@ -291,16 +331,19 @@ def subscription_management():
         title="Subscriptions",
         active_page="subscriptions",
         subscriptions=load_gmail_subscriptions(subscriptions, user_id),
-        gmail_status=credentials_status(user_id),
+        gmail_status=current_gmail_status(),
     )
 
 
 @app.post("/sync-gmail")
 def sync_gmail():
     user_id = current_user_id()
+    credentials_data = session_google_credentials()
     try:
-        imported = sync_gmail_subscriptions(user_id)
+        imported = sync_gmail_subscriptions(user_id, credentials_data)
         merge_subscriptions(subscriptions, imported, user_id)
+        if credentials_data:
+            save_session_google_credentials(credentials_data)
         flash(f"Gmail sync complete. Found {len(imported)} subscription payment email(s).", "success")
     except GmailSyncError as error:
         flash(str(error), "error")
@@ -310,8 +353,11 @@ def sync_gmail():
 @app.post("/sync-spam")
 def sync_spam():
     user_id = current_user_id()
+    credentials_data = session_google_credentials()
     try:
-        messages = sync_spam_messages(user_id)
+        messages = sync_spam_messages(user_id, credentials_data)
+        if credentials_data:
+            save_session_google_credentials(credentials_data)
         useful_count = len([message for message in messages if message["recommendation"] == "Review"])
         flash(f"Spam scan complete. Found {len(messages)} spam email(s), {useful_count} worth reviewing.", "success")
     except GmailSyncError as error:
@@ -322,8 +368,11 @@ def sync_spam():
 @app.post("/sync-important")
 def sync_important():
     user_id = current_user_id()
+    credentials_data = session_google_credentials()
     try:
-        data = sync_important_mail(user_id)
+        data = sync_important_mail(user_id, credentials_data)
+        if credentials_data:
+            save_session_google_credentials(credentials_data)
         total = len(data["security"]) + len(data["attention"])
         flash(f"Important mail scan complete. Found {total} email(s) worth noticing.", "success")
     except GmailSyncError as error:
@@ -334,8 +383,11 @@ def sync_important():
 @app.post("/sync-bank")
 def sync_bank():
     user_id = current_user_id()
+    credentials_data = session_google_credentials()
     try:
-        data = sync_bank_transactions(user_id)
+        data = sync_bank_transactions(user_id, credentials_data)
+        if credentials_data:
+            save_session_google_credentials(credentials_data)
         flash(f"Bank transaction scan complete. Found {len(data['transactions'])} spending email(s).", "success")
     except GmailSyncError as error:
         flash(str(error), "error")
@@ -349,7 +401,7 @@ def gmail_setup():
         "gmail_setup.html",
         title="Gmail Setup",
         active_page="gmail",
-        gmail_status=credentials_status(user_id),
+        gmail_status=current_gmail_status(),
     )
 
 
@@ -365,7 +417,7 @@ def spam_monitor():
         active_page="spam",
         messages=messages,
         useful_count=useful_count,
-        gmail_status=credentials_status(user_id),
+        gmail_status=current_gmail_status(),
     )
 
 
@@ -381,7 +433,7 @@ def important_mail():
         active_page="important",
         mail=data,
         total=total,
-        gmail_status=credentials_status(user_id),
+        gmail_status=current_gmail_status(),
     )
 
 
@@ -398,7 +450,7 @@ def bank_transactions():
         bank=data,
         current_month=current_month,
         chart_data=bank_chart_data(data),
-        gmail_status=credentials_status(user_id),
+        gmail_status=current_gmail_status(),
     )
 
 

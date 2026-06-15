@@ -104,7 +104,12 @@ def finish_google_sign_in(authorization_response, redirect_uri):
     _token_file(user_id).write_text(creds.to_json(), encoding="utf-8")
     _save_gmail_profile(service, user_id)
     _migrate_legacy_data(user_id)
-    return {"id": user_id, "email": email, "initials": _initials(email)}
+    return {
+        "id": user_id,
+        "email": email,
+        "initials": _initials(email),
+        "credentials": json.loads(creds.to_json()),
+    }
 
 
 def load_gmail_subscriptions(fallback, user_id=None):
@@ -137,8 +142,8 @@ def merge_subscriptions(fallback, imported, user_id):
     return merged
 
 
-def sync_gmail_subscriptions(user_id):
-    service = _gmail_service(user_id)
+def sync_gmail_subscriptions(user_id, credentials_data=None):
+    service = _gmail_service(user_id, credentials_data)
     _save_gmail_profile(service, user_id)
     query = (
         'newer_than:180d (receipt OR invoice OR payment OR subscription OR renewal) '
@@ -164,8 +169,8 @@ def load_spam_messages(user_id=None):
         return json.load(file)
 
 
-def sync_spam_messages(user_id):
-    service = _gmail_service(user_id)
+def sync_spam_messages(user_id, credentials_data=None):
+    service = _gmail_service(user_id, credentials_data)
     _save_gmail_profile(service, user_id)
     response = service.users().messages().list(userId="me", q="in:spam newer_than:30d", maxResults=25).execute()
     messages = response.get("messages", [])
@@ -188,8 +193,8 @@ def load_important_mail(user_id=None):
         return json.load(file)
 
 
-def sync_important_mail(user_id):
-    service = _gmail_service(user_id)
+def sync_important_mail(user_id, credentials_data=None):
+    service = _gmail_service(user_id, credentials_data)
     _save_gmail_profile(service, user_id)
     query = (
         'newer_than:365d -in:spam '
@@ -229,8 +234,8 @@ def load_bank_transactions(user_id=None):
         return json.load(file)
 
 
-def sync_bank_transactions(user_id):
-    service = _gmail_service(user_id)
+def sync_bank_transactions(user_id, credentials_data=None):
+    service = _gmail_service(user_id, credentials_data)
     _save_gmail_profile(service, user_id)
     query = (
         'newer_than:365d -in:spam '
@@ -259,8 +264,9 @@ def sync_bank_transactions(user_id):
     return data
 
 
-def _gmail_service(user_id):
+def _gmail_service(user_id, credentials_data=None):
     try:
+        from google.auth.exceptions import RefreshError
         from google.auth.transport.requests import Request
         from google.oauth2.credentials import Credentials
         from googleapiclient.discovery import build
@@ -268,16 +274,29 @@ def _gmail_service(user_id):
         raise GmailSyncError("Gmail packages are not installed. Run: pip install -r requirements.txt") from error
 
     token_file = _token_file(user_id)
-    if not user_id or not token_file.exists():
+    if credentials_data:
+        creds = Credentials.from_authorized_user_info(credentials_data, SCOPES)
+    elif user_id and token_file.exists():
+        creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)
+    else:
         raise GmailSyncError("Please sign in with Google first.")
 
-    creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)
     if not creds.valid:
         if creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            token_file.write_text(creds.to_json(), encoding="utf-8")
+            try:
+                creds.refresh(Request())
+            except RefreshError as error:
+                raise GmailSyncError("Your Google session expired. Please sign in again.") from error
         else:
             raise GmailSyncError("Your Google session expired. Please sign in again.")
+
+    refreshed_data = json.loads(creds.to_json())
+    if credentials_data is not None:
+        credentials_data.clear()
+        credentials_data.update(refreshed_data)
+    if user_id:
+        _user_dir(user_id).mkdir(parents=True, exist_ok=True)
+        token_file.write_text(creds.to_json(), encoding="utf-8")
     return build("gmail", "v1", credentials=creds)
 
 
